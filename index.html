@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game: Catch the Falling Hearts! ❤️</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111111;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        h1 {
+            margin: 5px 0;
+            color: #ff2a55;
+            text-shadow: 0 0 15px rgba(255, 42, 85, 0.6);
+            letter-spacing: 1px;
+            font-size: 28px;
+        }
+
+        .score-board {
+            font-size: 20px;
+            font-weight: bold;
+            background: #1e1e1e;
+            padding: 10px 25px;
+            border-radius: 30px;
+            border: 2px solid #333;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        canvas {
+            background: linear-gradient(to bottom, #1a1c2e, #0f101b);
+            border: 4px solid #ff2a55;
+            box-shadow: 0 0 30px rgba(255, 42, 85, 0.2);
+            border-radius: 12px;
+            cursor: none; 
+        }
+
+        .instructions {
+            margin-top: 15px;
+            color: #888;
+            font-size: 14px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>HEART CATCHER 🏹❤️</h1>
+    <div class="score-board">Skor: <span id="txtSkor">0</span> | Nyawa: <span id="txtNyawa" style="color: #ff2a55;">❤❤规格</span></div>
+    
+    <canvas id="gameCanvas" width="500" height="450"></canvas>
+    
+    <div class="instructions">Geser Kursor Mouse Anda ke Kanan & Kiri untuk Menggerakkan Keranjang</div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let score = 0;
+        let lives = 3;
+        let gameActive = true;
+        let listHati = [];
+        let kecepatanJatuh = 3; 
+        let frekuensiMuncul = 0.02; 
+
+        const basket = {
+            x: canvas.width / 2 - 40,
+            y: canvas.height - 30,
+            width: 80,
+            height: 15,
+            color: "#ff2a55"
+        };
+
+        // --- NAMA CLASS SUDAH DIGABUNG TANPA SPASI (SUDAH BENAR) ---
+        class HatiJatuh {
+            constructor() {
+                this.radius = 12;
+                this.x = Math.random() * (canvas.width - this.radius * 2) + this.radius;
+                this.y = -20;
+                this.speed = Math.random() * 2 + kecepatanJatuh;
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.fillStyle = "#ff2a55";
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = "#ff2a55";
+                
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y + this.radius / 4);
+                ctx.bezierCurveTo(this.x + this.radius / 2, this.y - this.radius / 2, this.x + this.radius, this.y, this.x, this.y + this.radius);
+                ctx.bezierCurveTo(this.x - this.radius, this.y, this.x - this.radius / 2, this.y - this.radius / 2, this.x, this.y + this.radius / 4);
+                ctx.fill();
+                ctx.closePath();
+                ctx.restore();
+            }
+        }
+
+        canvas.addEventListener("mousemove", function(event) {
+            const rect = canvas.getBoundingClientRect();
+            basket.x = event.clientX - rect.left - basket.width / 2;
+
+            if (basket.x < 0) basket.x = 0;
+            if (basket.x > canvas.width - basket.width) basket.x = canvas.width - basket.width;
+        });
+
+        function updateGame() {
+            if (!gameActive) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.fillStyle = basket.color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = basket.color;
+            ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+            ctx.restore();
+
+            if (Math.random() < frekuensiMuncul) {
+                listHati.push(new HantiJatuh());
+            }
+
+            function HantiJatuh() {
+                return new HatiJatuh();
+            }
+
+            for (let i = listHati.length - 1; i >= 0; i--) {
+                let h = listHati[i];
+                h.update();
+                h.draw();
+
+                if (h.y + h.radius >= basket.y && h.x >= basket.x && h.x <= basket.x + basket.width && h.y <= basket.y + basket.height) {
+                    score += 10;
+                    document.getElementById("txtSkor").innerText = score;
+                    listHati.splice(i, 1); 
+
+                    if (score % 100 === 0) {
+                        kecepatanJatuh += 0.5;
+                        frekuensiMuncul += 0.005;
+                    }
+                    continue;
+                }
+
+                if (h.y > canvas.height) {
+                    listHati.splice(i, 1); 
+                    lives--;
+                    
+                    let stringNyawa = "";
+                    for(let n=0; n<lives; n++) stringNyawa += "❤";
+                    document.getElementById("txtNyawa").innerText = stringNyawa || "Mati";
+
+                    if (lives <= 0) {
+                        gameActive = false;
+                        setTimeout(() => {
+                            alert("💔 GAME OVER! 💔\nHati yang Anda tangkap pecah semua.\n\nSkor Akhir Anda: " + score + " Poin.");
+                            resetUlangGame();
+                        }, 100);
+                    }
+                }
+            }
+
+            requestAnimationFrame(updateGame);
+        }
+
+        function resetUlangGame() {
+            score = 0;
+            lives = 3;
+            kecepatanJatuh = 3;
+            frekuensiMuncul = 0.02;
+            listHati = [];
+            gameActive = true;
+            document.getElementById("txtSkor").innerText = score;
+            document.getElementById("txtNyawa").innerText = "❤❤❤";
+            updateGame();
+        }
+
+        updateGame();
+    </script>
+
+</body>
+</html>
